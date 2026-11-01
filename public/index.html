@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ThaparVerse</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0f1220; font-family: system-ui, sans-serif; }
+  #tip { position: fixed; pointer-events: none; display: none; max-width: 260px; padding: 10px 12px;
+         background: rgba(20,24,40,.95); color: #fff; border: 1px solid #3b4270; border-radius: 8px; font-size: 14px; }
+  #tip b { display: block; margin-bottom: 4px; font-size: 15px; }
+  #msg { position: fixed; top: 12px; left: 12px; color: #aab; font-size: 13px; }
+</style>
+</head>
+<body>
+<div id="msg">ThaparVerse: loading campus...</div>
+<div id="tip"></div>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0f1220);
+const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 5000);
+camera.position.set(60, 60, 60);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+sun.position.set(50, 100, 30);
+scene.add(sun);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+const info = await fetch('data/buildings.json').then(r => r.json());
+const clickable = [];
+
+const draco = new DRACOLoader();
+draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+const loader = new GLTFLoader();
+loader.setDRACOLoader(draco);
+
+loader.load('models/campus.glb', gltf => {
+  scene.add(gltf.scene);
+  gltf.scene.traverse(o => { if (o.isMesh && info[o.name]) clickable.push(o); });
+  const box = new THREE.Box3().setFromObject(gltf.scene);
+  controls.target.copy(box.getCenter(new THREE.Vector3()));
+  document.getElementById('msg').textContent = 'Hover a building';
+}, undefined, () => {
+  document.getElementById('msg').textContent = 'Could not load models/campus.glb. Export your Blender model there.';
+});
+
+const ray = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+const tip = document.getElementById('tip');
+let hovered = null;
+
+addEventListener('pointermove', e => {
+  mouse.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  const hit = ray.intersectObjects(clickable, false)[0];
+  if (hovered && (!hit || hit.object !== hovered)) {
+    hovered.material.emissive?.set(0x000000);
+    hovered = null;
+    tip.style.display = 'none';
+  }
+  if (hit) {
+    hovered = hit.object;
+    hovered.material.emissive?.set(0x224488);
+    const d = info[hovered.name];
+    tip.innerHTML = `<b>${d.name}</b>${d.description}<br><small>${d.details}</small>`;
+    tip.style.display = 'block';
+    tip.style.left = e.clientX + 14 + 'px';
+    tip.style.top = e.clientY + 14 + 'px';
+  }
+});
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+</script>
+</body>
+</html>

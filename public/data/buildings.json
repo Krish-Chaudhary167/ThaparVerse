@@ -1,0 +1,17 @@
+{
+  "CSED_Building": {
+    "name": "CSED Building",
+    "description": "Computer Science and Engineering Department.",
+    "details": "Add floors, labs, contact info here."
+  },
+  "Library_Building": {
+    "name": "Library",
+    "description": "Central library of the campus.",
+    "details": "Add timings, reading halls, borrowing rules here."
+  },
+  "LP_Building": {
+    "name": "LP Block",
+    "description": "Lecture and classroom block.",
+    "details": "Add lecture hall ranges, floors here."
+  }
+}
